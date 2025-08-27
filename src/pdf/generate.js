@@ -10,7 +10,7 @@ const style = `
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background:#0B1F4D; color:#fff; text-align:left;}
     .small { color:#666; font-size:12px; }
-    .map { margin-top: 8px; border:1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .map { margin-top: 8px; border:1px solid #ddd; border-radius: 8px; overflow: hidden; max-width: 560px; }
   </style>
 `;
 

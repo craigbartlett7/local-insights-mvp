@@ -6,7 +6,7 @@ import axios from 'axios';
  */
 export async function getAirQuality(lat, lng) {
   try {
-    const url = `https://api.openaq.org/v2/latest?coordinates=${lat},${lng}&radius=10000&limit=5`;
+    const url = `https://api.openaq.org/v2/latest?coordinates=${lat},${lng}&radius=25000&limit=5`;
     const { data } = await axios.get(url);
     const results = data?.results || [];
     const pick = (param) => {

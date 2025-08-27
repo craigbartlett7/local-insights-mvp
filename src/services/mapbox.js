@@ -1,8 +1,8 @@
 export function buildStaticMapUrl({ lat, lng, isochrones, overlays }) {
   const token = process.env.MAPBOX_TOKEN;
   if (!token) return null;
-  const zoom = 14;
-  const width = 800, height = 500;
+  const zoom = 13;
+  const width = 600, height = 320;
   const marker = `pin-s+285A98(${lng},${lat})`;
   const style = 'light-v11';
 
