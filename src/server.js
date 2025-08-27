@@ -10,6 +10,8 @@ import { getBroadbandSnapshot } from './services/broadband.js';
 import { getMobileSnapshot } from './services/mobile.js';
 import { getEpcSummary } from './services/epc.js';
 import { getSchoolsSummary } from './services/schools.js';
+import { buildStaticMapUrl } from './services/mapbox.js';
+import { getIsochronesSummary } from './services/isochrones.js';
 import { generatePdfReport, htmlTemplate } from './pdf/generate.js';
 
 dotenv.config();
@@ -24,15 +26,19 @@ const __dirname = path.dirname(__filename);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 async function buildPanels(geo, postcode, number) {
-  const [crime, flood, broadband, mobile, epc, schools] = await Promise.all([
+  const [crime, flood, broadband, mobile, epc, schools, isochrones] = await Promise.all([
     getRecentCrimeSummary(geo.latitude, geo.longitude).catch(()=>null),
     getFloodSnapshot(geo.latitude, geo.longitude).catch(()=>null),
     getBroadbandSnapshot(postcode).catch(()=>null),
     getMobileSnapshot(postcode).catch(()=>null),
     getEpcSummary({ postcode, number }).catch(()=>null),
-    getSchoolsSummary(geo).catch(()=>null)
+    getSchoolsSummary(geo).catch(()=>null),
+    getIsochronesSummary(geo.latitude, geo.longitude).catch(()=>null)
   ]);
-  return { crime, flood, broadband, mobile, epc, schools };
+  const mapImageUrl = buildStaticMapUrl({
+    lat: geo.latitude, lng: geo.longitude, isochrones
+  });
+  return { crime, flood, broadband, mobile, epc, schools, mapImageUrl, isochrones };
 }
 
 app.get('/api/preview', async (req, res) => {
@@ -64,7 +70,6 @@ app.get('/api/report.pdf', async (req, res) => {
   }
 });
 
-// Pretty HTML report for demos/debug
 app.get('/api/report.html', async (req, res) => {
   try {
     const { postcode, number } = req.query;
@@ -78,7 +83,6 @@ app.get('/api/report.html', async (req, res) => {
   }
 });
 
-// Serve index.html
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });

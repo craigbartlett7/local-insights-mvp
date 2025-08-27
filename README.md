@@ -1,20 +1,25 @@
+# Local Insights MVP – Sprint 2
 
-# Local Insights MVP – Pretty UI + HTML Report
+**New in this build**
+- Mapbox static map snapshot on preview & HTML report.
+- OpenRouteService isochrones summary (walk 15 min, drive 30 min).
+- Hardened PDF renderer (Puppeteer flags for Render).
+- Pretty preview UI retained.
 
-This build includes:
-- Card-based preview UI (no raw JSON)
-- `/api/report.html` endpoint (pretty HTML report for demos)
-- PDF route still present; we’ll harden Puppeteer in the next update.
+## Environment variables
+PORT=3000
+OFCOM_API_KEY=      # optional until approved
+EPC_API_TOKEN=      # optional until you add it
+MAPBOX_TOKEN=       # required for map snapshot
+ORS_API_KEY=        # required for isochrone summary
 
 ## Run locally
-```bash
 cp .env.example .env
 npm install
 npm run dev
 # open http://localhost:3000
-```
 
-## Render deploy
-- Build: `npm install`
-- Start: `npm run start`
-- Env: `PORT=3000`, `OFCOM_API_KEY` (optional), `EPC_API_TOKEN` (optional)
+## Endpoints
+- /api/preview?postcode=SW1A1AA&number=10
+- /api/report.html?postcode=SW1A1AA&number=10
+- /api/report.pdf?postcode=SW1A1AA&number=10

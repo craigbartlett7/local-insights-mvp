@@ -9,6 +9,7 @@ const style = `
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background:#0B1F4D; color:#fff; text-align:left;}
     .small { color:#666; font-size:12px; }
+    .map { margin-top: 8px; border:1px solid #ddd; border-radius: 8px; overflow: hidden; }
   </style>
 `;
 
@@ -48,6 +49,25 @@ function epcSection(epc){
   return `<p>EPC: Unknown mode</p>`;
 }
 
+function accessibilitySection(iso) {
+  if (!iso || !iso.available) return '<p class="small">Accessibility: No ORS key / not available.</p>';
+  const walk = iso.items.find(i=>i.label==='walk_15');
+  const drive = iso.items.find(i=>i.label==='drive_30');
+  const a = (ok)=> ok ? '✓' : '—';
+  return `
+    <table>
+      <tr><th>Mode</th><th>Coverage</th></tr>
+      <tr><td>Walk (15 min)</td><td>${a(walk?.ok)}</td></tr>
+      <tr><td>Drive (30 min)</td><td>${a(drive?.ok)}</td></tr>
+    </table>
+  `;
+}
+
+function htmlMap(panels){
+  if (!panels.mapImageUrl) return '<p class="small">Map: Provide MAPBOX_TOKEN to enable static map.</p>';
+  return `<div class="map"><img src="${panels.mapImageUrl}" style="width:100%; height:auto;" alt="Map snapshot"/></div>`;
+}
+
 function htmlTemplate({ postcode, number, geo, panels }) {
   const crimeRows = (panels.crime?.topCategories || []).map(c=>`<tr><td>${c.category}</td><td>${c.count}</td></tr>`).join('');
   const schoolsRows = (panels.schools?.nearest || []).map(s=>`<tr><td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td></tr>`).join('');
@@ -55,6 +75,7 @@ function htmlTemplate({ postcode, number, geo, panels }) {
   const broadband = panels.broadband || {};
   const flood = panels.flood || {};
   const epc = panels.epc || {};
+  const iso = panels.isochrones || {};
 
   return `
     <!doctype html>
@@ -62,6 +83,9 @@ function htmlTemplate({ postcode, number, geo, panels }) {
     <body>
       <h1>Local Insights Report</h1>
       <div class="small">Postcode: ${postcode} ${number?(' | Number/Name: '+number):''}</div>
+
+      <h2>Location Map</h2>
+      ${htmlMap(panels)}
 
       <h2>Executive Snapshot</h2>
       <table>
@@ -73,6 +97,9 @@ function htmlTemplate({ postcode, number, geo, panels }) {
         ${row('EPC mode', epc.mode || 'N/A')}
         ${row('LSOA', geo.lsoa || '—')}
       </table>
+
+      <h2>Accessibility (Isochrones)</h2>
+      ${accessibilitySection(iso)}
 
       <h2>Crime & Safety</h2>
       <div class="small">Month: ${panels.crime?.month || '—'}</div>
@@ -108,18 +135,31 @@ function htmlTemplate({ postcode, number, geo, panels }) {
         ${schoolsRows || '<tr><td colspan="3">N/A</td></tr>'}
       </table>
 
-      <p class="small">Sources (wired/coming): postcodes.io, data.police.uk, environment.data.gov.uk, Ofcom APIs, epc.opendatacommunities.org, GIAS/Ofsted.</p>
+      <p class="small">Sources: postcodes.io, data.police.uk, Environment Agency, Ofcom (pending), EPC ODC, ORS, Mapbox.</p>
     </body></html>
   `;
 }
 
 export async function generatePdfReport(data) {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-  const page = await browser.newPage();
-  await page.setContent(htmlTemplate(data), { waitUntil: 'load' });
-  const pdf = await page.pdf({ format: 'A4', printBackground: true });
-  await browser.close();
-  return pdf;
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process'
+      ]
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlTemplate(data), { waitUntil: 'load' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true });
+    return pdf;
+  } finally {
+    if (browser) { try { await browser.close(); } catch {} }
+  }
 }
 
 export { htmlTemplate };

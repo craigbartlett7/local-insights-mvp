@@ -28,13 +28,13 @@
     .table th { background:var(--blue); color:#fff; text-align:left; }
     .actions { display:flex; gap:8px; flex-wrap:wrap; }
     .note { color:var(--muted); font-size:12px; margin-top:6px; }
-    footer { text-align:center; color:var(--muted); font-size:12px; padding:16px; }
+    .map { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
     .hidden { display:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Local Insights – Preview</h1>
+    <h1>Local Insights – Preview (Sprint 2)</h1>
   </header>
   <main>
     <div class="panel">
@@ -54,7 +54,12 @@
         <button id="pdf">Download PDF</button>
         <button id="html" class="secondary">Open HTML Report</button>
       </div>
-      <div class="note">Tip: PDF may be pending until the next update; use the HTML Report for demos.</div>
+      <div class="note">Map & Accessibility require MAPBOX_TOKEN and ORS_API_KEY (you've added them 🎉).</div>
+    </div>
+
+    <div id="mapwrap" class="panel hidden">
+      <h3 style="margin:0 0 8px 0; color:var(--gold)">Map Snapshot</h3>
+      <div id="mapimg" class="map"></div>
     </div>
 
     <div id="summary" class="cards hidden">
@@ -63,6 +68,7 @@
       <div class="card"><h3>Broadband (max)</h3><div class="metric" id="m-bb">—</div><div class="sub" id="m-bb-tech"></div></div>
       <div class="card"><h3>Mobile coverage</h3><div class="metric" id="m-mobile">—</div><div class="sub">Indoor 4G / Outdoor 5G</div></div>
       <div class="card"><h3>EPC mode</h3><div class="metric" id="m-epc-mode">—</div><div class="sub" id="m-epc-note"></div></div>
+      <div class="card"><h3>Accessibility</h3><div class="metric" id="m-iso">—</div><div class="sub">Walk 15 • Drive 30</div></div>
     </div>
 
     <div id="detail" class="panel hidden">
@@ -74,80 +80,95 @@
     </div>
   </main>
 
-  <footer>© Local Insights • Powered by Proactive Business Group</footer>
-
-<script>
-const $ = (s)=>document.querySelector(s);
-
-function qs() {
-  const q = new URLSearchParams();
-  const pc = $('#pc').value.trim();
-  if (pc) q.set('postcode', pc);
-  const num = $('#number').value.trim();
-  if (num) q.set('number', num);
-  return q.toString();
-}
-
-function setText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
-}
-
-function show(el, yes) { el.classList.toggle('hidden', !yes); }
-
-$('#preview').onclick = async () => {
-  const query = qs();
-  if (!query.includes('postcode=')) return alert('Enter a postcode');
-  const res = await fetch('/api/preview?' + query);
-  const json = await res.json();
-
-  // Summary cards
-  const crimeTotal = json.panels?.crime?.total ?? '—';
-  const crimeMonth = json.panels?.crime?.month ?? '';
-  setText('m-crime', String(crimeTotal));
-  setText('m-crime-month', crimeMonth ? `Month: ${crimeMonth}` : '');
-
-  const floodActive = json.panels?.flood?.activeWarnings ?? '—';
-  setText('m-flood', String(floodActive));
-
-  const maxDown = json.panels?.broadband?.maxDownMbps;
-  const maxUp = json.panels?.broadband?.maxUpMbps;
-  setText('m-bb', (maxDown ? `${maxDown}↓ / ${maxUp||'—'}↑ Mbps` : '—'));
-  setText('m-bb-tech', (json.panels?.broadband?.available||[]).join(', '));
-
-  const mobileCount = (json.panels?.mobile?.mnos||[]).length;
-  setText('m-mobile', mobileCount ? `${mobileCount} MNOs` : '—');
-
-  const epcMode = json.panels?.epc?.mode || '—';
-  const epcNote = json.panels?.epc?.note || '';
-  setText('m-epc-mode', epcMode);
-  setText('m-epc-note', epcNote);
-
-  // Schools table
-  const tbody = document.querySelector('#schools tbody');
-  tbody.innerHTML = '';
-  const schools = json.panels?.schools?.nearest || [];
-  for (const s of schools) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td>`;
-    tbody.appendChild(tr);
+  <script>
+  const $ = (s)=>document.querySelector(s);
+  function qs() {
+    const q = new URLSearchParams();
+    const pc = $('#pc').value.trim();
+    if (pc) q.set('postcode', pc);
+    const num = $('#number').value.trim();
+    if (num) q.set('number', num);
+    return q.toString();
   }
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+  function show(el, yes) { el.classList.toggle('hidden', !yes); }
 
-  show(document.getElementById('summary'), true);
-  show(document.getElementById('detail'), schools.length > 0);
-};
+  $('#preview').onclick = async () => {
+    const query = qs();
+    if (!query.includes('postcode=')) return alert('Enter a postcode');
+    const res = await fetch('/api/preview?' + query);
+    const json = await res.json();
 
-$('#pdf').onclick = () => {
-  const query = qs();
-  if (!query.includes('postcode=')) return alert('Enter a postcode');
-  window.location = '/api/report.pdf?' + query;
-};
+    // Map image
+    const mapUrl = json.panels?.mapImageUrl || null;
+    const mapwrap = document.getElementById('mapwrap');
+    const mapimg = document.getElementById('mapimg');
+    if (mapUrl) {
+      mapimg.innerHTML = `<img src="${mapUrl}" style="width:100%;height:auto" alt="Map snapshot">`;
+      show(mapwrap, true);
+    } else {
+      mapimg.innerHTML = '<div class="note">Provide MAPBOX_TOKEN in env to see map.</div>';
+      show(mapwrap, true);
+    }
 
-$('#html').onclick = () => {
-  const query = qs();
-  if (!query.includes('postcode=')) return alert('Enter a postcode');
-  window.open('/api/report.html?' + query, '_blank');
-};
-</script>
+    // Summary cards
+    const crimeTotal = json.panels?.crime?.total ?? '—';
+    const crimeMonth = json.panels?.crime?.month ?? '';
+    setText('m-crime', String(crimeTotal));
+    setText('m-crime-month', crimeMonth ? `Month: ${crimeMonth}` : '');
+
+    const floodActive = json.panels?.flood?.activeWarnings ?? '—';
+    setText('m-flood', String(floodActive));
+
+    const maxDown = json.panels?.broadband?.maxDownMbps;
+    const maxUp = json.panels?.broadband?.maxUpMbps;
+    setText('m-bb', (maxDown ? `${maxDown}↓ / ${maxUp||'—'}↑ Mbps` : '—'));
+    setText('m-bb-tech', (json.panels?.broadband?.available||[]).join(', '));
+
+    const mobileCount = (json.panels?.mobile?.mnos||[]).length;
+    setText('m-mobile', mobileCount ? `${mobileCount} MNOs` : '—');
+
+    const epcMode = json.panels?.epc?.mode || '—';
+    const epcNote = json.panels?.epc?.note || '';
+    setText('m-epc-mode', epcMode);
+    setText('m-epc-note', epcNote);
+
+    const walkOk = json.panels?.isochrones?.items?.find(i=>i.label==='walk_15')?.ok;
+    const driveOk = json.panels?.isochrones?.items?.find(i=>i.label==='drive_30')?.ok;
+    let isoTxt = '—';
+    if (walkOk || driveOk) {
+      isoTxt = `${walkOk ? 'Walk 15 ✓' : 'Walk 15 —'} · ${driveOk ? 'Drive 30 ✓' : 'Drive 30 —'}`;
+    }
+    setText('m-iso', isoTxt);
+
+    // Schools table
+    const tbody = document.querySelector('#schools tbody');
+    tbody.innerHTML = '';
+    const schools = json.panels?.schools?.nearest || [];
+    for (const s of schools) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td>`;
+      tbody.appendChild(tr);
+    }
+
+    show(document.getElementById('summary'), true);
+    show(document.getElementById('detail'), schools.length > 0);
+  };
+
+  $('#pdf').onclick = () => {
+    const query = qs();
+    if (!query.includes('postcode=')) return alert('Enter a postcode');
+    window.location = '/api/report.pdf?' + query;
+  };
+
+  $('#html').onclick = () => {
+    const query = qs();
+    if (!query.includes('postcode=')) return alert('Enter a postcode');
+    window.open('/api/report.html?' + query, '_blank');
+  };
+  </script>
 </body>
 </html>
