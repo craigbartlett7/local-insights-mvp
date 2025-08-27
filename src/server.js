@@ -10,7 +10,7 @@ import { getBroadbandSnapshot } from './services/broadband.js';
 import { getMobileSnapshot } from './services/mobile.js';
 import { getEpcSummary } from './services/epc.js';
 import { getSchoolsSummary } from './services/schools.js';
-import { generatePdfReport } from './pdf/generate.js';
+import { generatePdfReport, htmlTemplate } from './pdf/generate.js';
 
 dotenv.config();
 const app = express();
@@ -35,7 +35,6 @@ async function buildPanels(geo, postcode, number) {
   return { crime, flood, broadband, mobile, epc, schools };
 }
 
-// Example: /api/preview?postcode=SW1A1AA&number=10
 app.get('/api/preview', async (req, res) => {
   try {
     const { postcode, number } = req.query;
@@ -49,7 +48,6 @@ app.get('/api/preview', async (req, res) => {
   }
 });
 
-// Example: /api/report.pdf?postcode=SW1A1AA&number=10
 app.get('/api/report.pdf', async (req, res) => {
   try {
     const { postcode, number } = req.query;
@@ -63,6 +61,20 @@ app.get('/api/report.pdf', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'report_failed', details: String(e) });
+  }
+});
+
+// Pretty HTML report for demos/debug
+app.get('/api/report.html', async (req, res) => {
+  try {
+    const { postcode, number } = req.query;
+    if (!postcode) return res.status(400).send('postcode required');
+    const geo = await getGeoForPostcode(String(postcode));
+    const panels = await buildPanels(geo, String(postcode), number ? String(number) : undefined);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlTemplate({ postcode, number: number || null, geo, panels }));
+  } catch (e) {
+    res.status(500).send(String(e));
   }
 });
 

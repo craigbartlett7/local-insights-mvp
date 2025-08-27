@@ -3,65 +3,150 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Local Insights – MVP</title>
+  <title>Local Insights – Preview</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 40px; color:#1b1f23; }
-    h1 { color:#0B1F4D; }
-    label, input { font-size: 16px; }
+    :root { --blue:#0B1F4D; --gold:#B1975B; --ink:#1b1f23; --muted:#667085; --line:#e5e7eb; }
+    * { box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+           margin: 0; color: var(--ink); background:#fafafb; }
+    header { background: var(--blue); color:#fff; padding: 20px 24px; }
+    header h1 { margin: 0; font-size: 20px; }
+    main { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0; }
     .row { display:flex; gap:12px; flex-wrap: wrap; }
-    .card { border:1px solid #e5e7eb; border-radius:12px; padding:16px; margin-top:16px; }
-    button { background:#0B1F4D; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; }
-    button:disabled { opacity:.5; }
-    .small { color:#666; font-size: 12px; }
-    pre { white-space: pre-wrap; word-wrap: break-word; }
-    input { padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; }
+    label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    input { padding:10px 12px; border-radius:10px; border:1px solid var(--line); min-width:260px; }
+    button { background:var(--blue); color:#fff; border:none; border-radius:10px; padding:10px 16px; cursor:pointer; }
+    button.secondary { background:#fff; color:var(--blue); border:1px solid var(--blue); }
+    .cards { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
+    .card { border:1px solid var(--line); border-radius:14px; background:#fff; padding:14px; }
+    .card h3 { margin:0 0 6px 0; font-size:14px; color:var(--muted); font-weight:600; }
+    .metric { font-size:22px; font-weight:700; color:var(--blue); }
+    .sub { color:var(--muted); font-size:12px; }
+    .table { width:100%; border-collapse: collapse; margin-top:8px; }
+    .table th, .table td { border:1px solid var(--line); padding:8px; font-size:14px; }
+    .table th { background:var(--blue); color:#fff; text-align:left; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .note { color:var(--muted); font-size:12px; margin-top:6px; }
+    footer { text-align:center; color:var(--muted); font-size:12px; padding:16px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
-  <h1>Local Insights MVP – Sprint 1.5</h1>
-  <p>Enter a UK <b>postcode</b> and optionally a <b>house number/name</b> to improve EPC accuracy.</p>
-
-  <div class="row">
-    <div>
-      <label for="number">House number/name (optional)</label><br/>
-      <input id="number" placeholder="e.g. 10 or The Oaks" />
+  <header>
+    <h1>Local Insights – Preview</h1>
+  </header>
+  <main>
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label for="number">House number/name (optional)</label>
+          <input id="number" placeholder="e.g. 10 or The Oaks" />
+        </div>
+        <div>
+          <label for="pc">Postcode</label>
+          <input id="pc" placeholder="e.g. SW1A 1AA" />
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="actions">
+        <button id="preview">Preview</button>
+        <button id="pdf">Download PDF</button>
+        <button id="html" class="secondary">Open HTML Report</button>
+      </div>
+      <div class="note">Tip: PDF may be pending until the next update; use the HTML Report for demos.</div>
     </div>
-    <div>
-      <label for="pc">Postcode</label><br/>
-      <input id="pc" placeholder="e.g. SW1A 1AA" />
-    </div>
-  </div>
-  <div style="height:12px"></div>
-  <button id="preview">Preview</button>
-  <button id="pdf">Download PDF</button>
 
-  <div id="output" class="card"></div>
+    <div id="summary" class="cards hidden">
+      <div class="card"><h3>Crime last month</h3><div class="metric" id="m-crime">—</div><div class="sub" id="m-crime-month"></div></div>
+      <div class="card"><h3>Flood alerts (England)</h3><div class="metric" id="m-flood">—</div><div class="sub">Active EA alerts</div></div>
+      <div class="card"><h3>Broadband (max)</h3><div class="metric" id="m-bb">—</div><div class="sub" id="m-bb-tech"></div></div>
+      <div class="card"><h3>Mobile coverage</h3><div class="metric" id="m-mobile">—</div><div class="sub">Indoor 4G / Outdoor 5G</div></div>
+      <div class="card"><h3>EPC mode</h3><div class="metric" id="m-epc-mode">—</div><div class="sub" id="m-epc-note"></div></div>
+    </div>
+
+    <div id="detail" class="panel hidden">
+      <h3 style="margin:0 0 8px 0; color:var(--gold)">Schools (nearest)</h3>
+      <table class="table" id="schools" style="margin-top:8px;">
+        <thead><tr><th>School</th><th>Ofsted</th><th>Distance</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>© Local Insights • Powered by Proactive Business Group</footer>
 
 <script>
 const $ = (s)=>document.querySelector(s);
 
-function qs(params) {
+function qs() {
   const q = new URLSearchParams();
-  const pc = $('#pc').value;
+  const pc = $('#pc').value.trim();
   if (pc) q.set('postcode', pc);
-  const num = $('#number').value;
+  const num = $('#number').value.trim();
   if (num) q.set('number', num);
   return q.toString();
 }
 
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function show(el, yes) { el.classList.toggle('hidden', !yes); }
+
 $('#preview').onclick = async () => {
-  const q = qs();
-  if (!q.includes('postcode=')) return alert('Enter a postcode');
-  $('#output').innerHTML = 'Loading...';
-  const res = await fetch('/api/preview?' + q);
+  const query = qs();
+  if (!query.includes('postcode=')) return alert('Enter a postcode');
+  const res = await fetch('/api/preview?' + query);
   const json = await res.json();
-  $('#output').innerHTML = '<pre>'+JSON.stringify(json, null, 2)+'</pre>';
+
+  // Summary cards
+  const crimeTotal = json.panels?.crime?.total ?? '—';
+  const crimeMonth = json.panels?.crime?.month ?? '';
+  setText('m-crime', String(crimeTotal));
+  setText('m-crime-month', crimeMonth ? `Month: ${crimeMonth}` : '');
+
+  const floodActive = json.panels?.flood?.activeWarnings ?? '—';
+  setText('m-flood', String(floodActive));
+
+  const maxDown = json.panels?.broadband?.maxDownMbps;
+  const maxUp = json.panels?.broadband?.maxUpMbps;
+  setText('m-bb', (maxDown ? `${maxDown}↓ / ${maxUp||'—'}↑ Mbps` : '—'));
+  setText('m-bb-tech', (json.panels?.broadband?.available||[]).join(', '));
+
+  const mobileCount = (json.panels?.mobile?.mnos||[]).length;
+  setText('m-mobile', mobileCount ? `${mobileCount} MNOs` : '—');
+
+  const epcMode = json.panels?.epc?.mode || '—';
+  const epcNote = json.panels?.epc?.note || '';
+  setText('m-epc-mode', epcMode);
+  setText('m-epc-note', epcNote);
+
+  // Schools table
+  const tbody = document.querySelector('#schools tbody');
+  tbody.innerHTML = '';
+  const schools = json.panels?.schools?.nearest || [];
+  for (const s of schools) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td>`;
+    tbody.appendChild(tr);
+  }
+
+  show(document.getElementById('summary'), true);
+  show(document.getElementById('detail'), schools.length > 0);
 };
 
 $('#pdf').onclick = () => {
-  const q = qs();
-  if (!q.includes('postcode=')) return alert('Enter a postcode');
-  window.location = '/api/report.pdf?' + q;
+  const query = qs();
+  if (!query.includes('postcode=')) return alert('Enter a postcode');
+  window.location = '/api/report.pdf?' + query;
+};
+
+$('#html').onclick = () => {
+  const query = qs();
+  if (!query.includes('postcode=')) return alert('Enter a postcode');
+  window.open('/api/report.html?' + query, '_blank');
 };
 </script>
 </body>

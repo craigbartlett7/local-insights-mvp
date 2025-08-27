@@ -9,15 +9,13 @@ const style = `
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background:#0B1F4D; color:#fff; text-align:left;}
     .small { color:#666; font-size:12px; }
-    .muted { color:#6b7280; }
-    .tag { display:inline-block; padding:2px 8px; border-radius: 9999px; background:#0B1F4D; color:#fff; font-size:12px; }
   </style>
 `;
 
 function row(k,v){ return `<tr><td>${k}</td><td>${v ?? '—'}</td></tr>`; }
 
 function epcSection(epc){
-  if (!epc) return '<p class="muted">EPC: No data</p>';
+  if (!epc) return '<p>EPC: No data</p>';
   if (epc.mode === 'property') {
     return `
       <table>
@@ -47,7 +45,7 @@ function epcSection(epc){
       </table>
     `;
   }
-  return `<p class="muted">EPC: Unknown mode</p>`;
+  return `<p>EPC: Unknown mode</p>`;
 }
 
 function htmlTemplate({ postcode, number, geo, panels }) {
@@ -110,7 +108,7 @@ function htmlTemplate({ postcode, number, geo, panels }) {
         ${schoolsRows || '<tr><td colspan="3">N/A</td></tr>'}
       </table>
 
-      <p class="small">Sources (wired/coming): postcodes.io, data.police.uk, environment.data.gov.uk, Ofcom APIs, epc.opendatacommunities.org, GIAS/Ofsted. Hybrid EPC mode: if house number/name is provided we show property-level EPC; otherwise postcode-wide context.</p>
+      <p class="small">Sources (wired/coming): postcodes.io, data.police.uk, environment.data.gov.uk, Ofcom APIs, epc.opendatacommunities.org, GIAS/Ofsted.</p>
     </body></html>
   `;
 }
@@ -123,3 +121,5 @@ export async function generatePdfReport(data) {
   await browser.close();
   return pdf;
 }
+
+export { htmlTemplate };
