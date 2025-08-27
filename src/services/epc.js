@@ -1,8 +1,38 @@
 import axios from 'axios';
 
 /**
- * EPC ODC requires Basic auth (encoded API key) + Accept header.
- * We'll request CSV and parse minimally.
+ * EPC ODC auth helper:
+ * Accepts EPC_API_TOKEN in any of these forms:
+ *  A) Base64 token (email:key)  -> EPC_API_TOKEN=base64string
+ *  B) Plain combo   (email:key) -> EPC_API_TOKEN="email:key"
+ *  C) Raw key only               -> EPC_API_TOKEN=key  AND EPC_EMAIL=email
+ * We always send: Authorization: Basic <base64(email:key)>
+ */
+function buildBasicAuthToken() {
+  const raw = (process.env.EPC_API_TOKEN || '').trim();
+  const emailEnv = (process.env.EPC_EMAIL || '').trim();
+
+  if (!raw) return null;
+
+  const looksBase64 = /^[A-Za-z0-9+/=]{40,}$/.test(raw) && raw.includes('=');
+  if (looksBase64) return raw; // assume already base64
+
+  if (raw.includes(':')) {
+    // email:key format
+    return Buffer.from(raw, 'utf8').toString('base64');
+  }
+
+  if (emailEnv) {
+    // raw key + EPC_EMAIL provided
+    return Buffer.from(`${emailEnv}:${raw}`, 'utf8').toString('base64');
+  }
+
+  // last resort: treat as base64 anyway (won't crash, may 401)
+  return raw;
+}
+
+/**
+ * Parse extremely regular CSV (no embedded commas).
  */
 function parseCsv(text){
   const lines = text.split(/\r?\n/).filter(Boolean);
@@ -21,20 +51,20 @@ function parseCsv(text){
 }
 
 export async function getEpcSummary({ postcode, number }) {
-  const token = process.env.EPC_API_TOKEN;
+  const basic = buildBasicAuthToken();
   const base = process.env.EPC_BASE_URL || 'https://epc.opendatacommunities.org/api/v1/domestic/search';
   const hasNumber = !!(number && String(number).trim().length);
   const pc = String(postcode).toUpperCase().replace(/\s+/g,'');
 
-  if (!token) {
-    return { mode: hasNumber ? 'property' : 'postcode', note:'No EPC_API_TOKEN set.' };
+  if (!basic) {
+    return { mode: hasNumber ? 'property' : 'postcode', note:'EPC credentials not configured. Set EPC_API_TOKEN (Base64, or email:key), or EPC_API_TOKEN=key + EPC_EMAIL.' };
   }
   try {
     const params = new URLSearchParams();
     params.set('postcode', pc);
     const url = `${base}?${params.toString()}`;
     const headers = {
-      'Authorization': `Basic ${token}`,
+      'Authorization': `Basic ${basic}`,
       'Accept': 'text/csv'
     };
     const { data: csv } = await axios.get(url, { headers });
@@ -81,6 +111,6 @@ export async function getEpcSummary({ postcode, number }) {
       return { mode:'postcode', propertiesAnalysed: latest.length, distribution: bands, averageRating: avg? bandOf(avg): '—', latestYear };
     }
   } catch (e) {
-    return { mode: hasNumber ? 'property' : 'postcode', error: true, message: String(e) };
+    return { mode: hasNumber ? 'property' : 'postcode', error: true, message: String(e.response?.status || '') + ' ' + String(e.message || e) };
   }
 }
