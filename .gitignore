@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+# Env files
+.env
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# OS junk
+.DS_Store
+Thumbs.db
+# Build cache/output
+dist/
+.out/
+.cache/
