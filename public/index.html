@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Local Insights – Preview</title>
+  <title>Local Insights – Preview (Sprint 2.3)</title>
   <style>
     :root { --blue:#0B1F4D; --gold:#B1975B; --ink:#1b1f23; --muted:#667085; --line:#e5e7eb; }
     * { box-sizing: border-box; }
@@ -36,7 +36,7 @@
   <header>
     <div style="display:flex;align-items:center;gap:12px;">
       <img src="/brand-logo.png" alt="Logo" style="height:36px;border-radius:6px" onerror="this.style.display='none'"/>
-      <h1>Local Insights – Preview (Sprint 2)</h1>
+      <h1>Local Insights – Preview (Sprint 2.3)</h1>
     </div>
   </header>
   <main>
@@ -55,23 +55,26 @@
       <div class="actions">
         <button id="preview">Preview</button>
         <button id="pdf">Download PDF</button>
-        <button id="html" class="secondary">Open HTML Report</button>
+        <button id="html" class="secondary">Open HTML Report (with charts)</button>
       </div>
-      <div class="note">Map & Accessibility require MAPBOX_TOKEN and ORS_API_KEY (you've added them 🎉).</div>
-    </div>
-
-    <div id="mapwrap" class="panel hidden">
-      <h3 style="margin:0 0 8px 0; color:var(--gold)">Map Snapshot</h3>
-      <div id="mapimg" class="map"></div>
+      <div class="note">Now includes Crime 12-month chart and River 365-day sparkline in the HTML/PDF report.</div>
     </div>
 
     <div id="summary" class="cards hidden">
       <div class="card"><h3>Crime last month</h3><div class="metric" id="m-crime">—</div><div class="sub" id="m-crime-month"></div></div>
+      <div class="card"><h3>Crime (12 mo)</h3><div class="metric" id="m-crime-yr">—</div><div class="sub">Total last year</div></div>
       <div class="card"><h3>Flood alerts (England)</h3><div class="metric" id="m-flood">—</div><div class="sub">Active EA alerts</div></div>
       <div class="card"><h3>Broadband (max)</h3><div class="metric" id="m-bb">—</div><div class="sub" id="m-bb-tech"></div></div>
       <div class="card"><h3>Mobile coverage</h3><div class="metric" id="m-mobile">—</div><div class="sub">Indoor 4G / Outdoor 5G</div></div>
       <div class="card"><h3>EPC mode</h3><div class="metric" id="m-epc-mode">—</div><div class="sub" id="m-epc-note"></div></div>
       <div class="card"><h3>Accessibility</h3><div class="metric" id="m-iso">—</div><div class="sub">Walk 15 • Drive 30</div></div>
+      <div class="card"><h3>Air (PM2.5)</h3><div class="metric" id="m-air-pm25">—</div><div class="sub">µg/m³ (nearest site)</div></div>
+      <div class="card"><h3>River trend</h3><div class="metric" id="m-river">—</div><div class="sub">7 days</div></div>
+    </div>
+
+    <div id="mapwrap" class="panel hidden">
+      <h3 style="margin:0 0 8px 0; color:var(--gold)">Map Snapshot</h3>
+      <div id="mapimg" class="map"></div>
     </div>
 
     <div id="detail" class="panel hidden">
@@ -93,10 +96,7 @@
     if (num) q.set('number', num);
     return q.toString();
   }
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  }
+  function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
   function show(el, yes) { el.classList.toggle('hidden', !yes); }
 
   $('#preview').onclick = async () => {
@@ -112,9 +112,6 @@
     if (mapUrl) {
       mapimg.innerHTML = `<img src="${mapUrl}" style="width:100%;height:auto" alt="Map snapshot">`;
       show(mapwrap, true);
-    } else {
-      mapimg.innerHTML = '<div class="note">Provide MAPBOX_TOKEN in env to see map.</div>';
-      show(mapwrap, true);
     }
 
     // Summary cards
@@ -122,6 +119,9 @@
     const crimeMonth = json.panels?.crime?.month ?? '';
     setText('m-crime', String(crimeTotal));
     setText('m-crime-month', crimeMonth ? `Month: ${crimeMonth}` : '');
+
+    const totalYear = json.panels?.crimeYear?.totalYear;
+    setText('m-crime-yr', (totalYear!=null)? String(totalYear): '—');
 
     const floodActive = json.panels?.flood?.activeWarnings ?? '—';
     setText('m-flood', String(floodActive));
@@ -142,10 +142,14 @@
     const walkOk = json.panels?.isochrones?.items?.find(i=>i.label==='walk_15')?.ok;
     const driveOk = json.panels?.isochrones?.items?.find(i=>i.label==='drive_30')?.ok;
     let isoTxt = '—';
-    if (walkOk || driveOk) {
-      isoTxt = `${walkOk ? 'Walk 15 ✓' : 'Walk 15 —'} · ${driveOk ? 'Drive 30 ✓' : 'Drive 30 —'}`;
-    }
+    if (walkOk || driveOk) isoTxt = `${walkOk ? 'Walk 15 ✓' : 'Walk 15 —'} · ${driveOk ? 'Drive 30 ✓' : 'Drive 30 —'}`;
     setText('m-iso', isoTxt);
+
+    const pm25 = json.panels?.air?.pm25?.value;
+    setText('m-air-pm25', (pm25!=null)? String(pm25): '—');
+
+    const river = json.panels?.river;
+    setText('m-river', (river?.available && typeof river.change === 'number') ? river.change.toFixed(2) : '—');
 
     // Schools table
     const tbody = document.querySelector('#schools tbody');

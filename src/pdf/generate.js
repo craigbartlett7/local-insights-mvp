@@ -85,6 +85,40 @@ function htmlMap(panels){
   return `<div class="map"><img src="${panels.mapImageUrl}" style="width:100%; height:auto;" alt="Map snapshot"/></div>`;
 }
 
+// --- Chart helpers (inline SVG) ---
+function svgBarChart(series, {w=600,h=120,p=24,maxY=null}={}){
+  const vals = series.map(s=> (s.count ?? 0));
+  const max = maxY || Math.max(1, ...vals);
+  const bw = (w - p*2) / series.length;
+  let bars = '';
+  for (let i=0;i<series.length;i++){
+    const v = vals[i];
+    const bh = Math.round(((h - p*2) * v) / max);
+    const x = Math.round(p + i*bw);
+    const y = Math.round(h - p - bh);
+    bars += `<rect x="${x}" y="${y}" width="${Math.max(2,bw-2)}" height="${bh}" fill="#0B1F4D" />`;
+  }
+  return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="12-month crime"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/><g>${bars}</g></svg>`;
+}
+
+function svgSparkline(points, {w=600,h=120,p=24}={}){
+  const ys = points.map(s=> s.v);
+  if (!ys.length) return '';
+  const min = Math.min(...ys), max = Math.max(...ys);
+  const dx = (w - p*2) / (points.length-1 || 1);
+  const scaleY = (v) => {
+    if (max === min) return h/2;
+    return h - p - ((v - min) / (max - min)) * (h - p*2);
+  };
+  let d = '';
+  for (let i=0;i<points.length;i++){
+    const x = Math.round(p + i*dx);
+    const y = Math.round(scaleY(points[i].v));
+    d += (i===0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+  }
+  return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="River level sparkline"><rect x="0" y="0" width="${w}" height="${h}" fill="#fff"/><path d="${d}" stroke="#B1975B" stroke-width="2" fill="none"/></svg>`;
+}
+
 function htmlTemplate({ postcode, number, geo, panels }) {
   const BRAND = getBranding();
   const crimeRows = (panels.crime?.topCategories || []).map(c=>`<tr><td>${c.category}</td><td>${c.count}</td></tr>`).join('');
@@ -120,7 +154,12 @@ function htmlTemplate({ postcode, number, geo, panels }) {
       ${accessibilitySection(iso)}
 
       <h2>Crime & Safety</h2>
-      <div class="small">Month: ${panels.crime?.month || '—'}</div>
+      <table>
+        <tr><th>Last 12 months (total)</th><td>${panels.crimeYear?.totalYear ?? 'N/A'}</td></tr>
+      </table>
+      <div>${(panels.crimeYear?.months && panels.crimeYear.months.length) ? svgBarChart(panels.crimeYear.months) : ''}</div>
+      <div class="small">Month breakdown shown as bars.</div>
+      <div class="small">Month: ${panels.crime?.month || '—'} — Top categories last month:</div>
       <table>
         <tr><th>Category</th><th>Count</th></tr>
         ${crimeRows || '<tr><td colspan="2">No data</td></tr>'}
@@ -128,9 +167,15 @@ function htmlTemplate({ postcode, number, geo, panels }) {
 
       <h2>Flood & Environmental</h2>
       <table>
-        <tr><th>Indicator</th><th>Value</th></tr>
-        ${row('Active EA alerts/warnings (England)', flood.activeWarnings ?? 'N/A')}
-        ${row('Note', flood.note || 'Baseline risk map to be added in Sprint 2')}
+        <tr><th>River level trend (7 days)</th><td>${panels.river?.available ? (panels.river.change.toFixed(2)+' '+(panels.river.unit||'')) : (panels.river?.note || 'N/A')}</td></tr>
+      </table>
+      <div>${(panels.riverYear?.series && panels.riverYear.series.length) ? svgSparkline(panels.riverYear.series) : ''}</div>
+      <div class="small">Year stats: min ${panels.riverYear?.stats?.min ?? '—'} • median ${panels.riverYear?.stats?.median ?? '—'} • max ${panels.riverYear?.stats?.max ?? '—'} ${panels.riverYear?.unit || ''}</div>
+
+      <h2>Air Quality</h2>
+      <table>
+        <tr><th>PM2.5</th><td>${panels.air?.pm25 ? (panels.air.pm25.value+' '+panels.air.pm25.unit) : 'N/A'}</td></tr>
+        <tr><th>NO₂</th><td>${panels.air?.no2 ? (panels.air.no2.value+' '+panels.air.no2.unit) : 'N/A'}</td></tr>
       </table>
 
       <h2>Connectivity</h2>
@@ -153,8 +198,9 @@ function htmlTemplate({ postcode, number, geo, panels }) {
         ${schoolsRows || '<tr><td colspan="3">N/A</td></tr>'}
       </table>
 
-      <p class="small">Sources: postcodes.io, data.police.uk, Environment Agency, Ofcom (pending), EPC ODC, ORS, Mapbox.</p>
-    ${footerHtml(BRAND)}</body></html>
+      <p class="small">Sources: postcodes.io, data.police.uk, Environment Agency, Ofcom (pending), EPC ODC, ORS, Mapbox, OpenAQ.</p>
+      ${footerHtml(BRAND)}
+    </body></html>
   `;
 }
 

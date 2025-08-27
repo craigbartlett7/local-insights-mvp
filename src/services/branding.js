@@ -15,8 +15,6 @@ export function getBranding() {
   const phone = process.env.BRAND_PHONE || '';
   const primary = process.env.BRAND_PRIMARY || '#0B1F4D';
   const secondary = process.env.BRAND_SECONDARY || '#B1975B';
-
-  // Try to load /public/brand-logo.png and base64 it for PDF embeds
   let logoDataUri = '';
   try {
     const p = path.join(__dirname, '../../public/brand-logo.png');
@@ -24,7 +22,6 @@ export function getBranding() {
     const b64 = buf.toString('base64');
     logoDataUri = `data:image/png;base64,${b64}`;
   } catch {}
-
   cached = { name, website, email, phone, primary, secondary, logoDataUri };
   return cached;
 }
