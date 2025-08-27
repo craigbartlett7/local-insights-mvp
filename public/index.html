@@ -70,7 +70,7 @@
       <div class="card"><h3>Accessibility</h3><div class="metric" id="m-iso">—</div><div class="sub">Walk 15 • Drive 30</div></div>
       <div class="card"><h3>Air (PM2.5)</h3><div class="metric" id="m-air-pm25">—</div><div class="sub">µg/m³ (nearest site)</div></div>
       <div class="card"><h3>River trend</h3><div class="metric" id="m-river">—</div><div class="sub">7 days</div></div>
-      <div class="card"><h3>Income (5 km)</h3><div class="metric" id="m-income">—</div><div class="sub">Avg household</div></div>
+      <div class="card"><h3>Income (5 km)</h3><div class="metric" id="m-income">—</div><div class="sub" id="m-income-sub">Avg household</div></div>
     </div>
     <div class="panel hidden" id="charts"><h3 style="margin:0 0 8px 0; color:var(--gold)">Trends</h3><div id="crimeSpark"></div></div>
 
@@ -156,6 +156,11 @@
     // Income
     const income = json.panels?.income;
     setText('m-income', (income?.available && income.averageIncome) ? ('£'+income.averageIncome.toLocaleString()) : '—');
+    const incSub = [];
+    if (income?.weighted) incSub.push('Weighted'); else incSub.push('Simple');
+    if (income?.radiusKm) incSub.push(`${income.radiusKm} km`);
+    if (income?.freshness) incSub.push((income.freshness||'').slice(0,10));
+    setText('m-income-sub', incSub.join(' • '));
 
     // Crime sparkline
     const months = json.panels?.crimeYear?.months || [];

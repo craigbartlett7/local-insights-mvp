@@ -12,3 +12,7 @@ E02000001,53.483,-2.237,32500
 - `median_household_income` in GBP/year.
 
 The app will compute the average of all MSOA centroids within 5 km of the selected location.
+
+
+## Included demo dataset
+A small demo `msoa_income.csv` is preloaded with sample centroids and incomes (London, Northampton, Manchester, etc.). Replace with full ONS dataset for production use.

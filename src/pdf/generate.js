@@ -176,7 +176,9 @@ function htmlTemplate({ postcode, number, geo, panels }) {
       <h2>Income (5 km catchment)</h2>
       <table>
         <tr><th>Average annual household income</th><td>${panels.income?.available ? ('£'+panels.income.averageIncome.toLocaleString()) : (panels.income?.note || 'N/A')}</td></tr>
+        <tr><th>Method</th><td>${panels.income?.weighted ? 'Household-weighted average' : 'Simple average'}</td></tr>
         <tr><th>Points used</th><td>${panels.income?.pointsUsed ?? '—'}</td></tr>
+        <tr><th>Data freshness</th><td>${panels.income?.freshness ? (panels.income.freshness.slice(0,10)) : 'N/A'} (${panels.income?.source || '—'})</td></tr>
       </table>
 
       <h2>Air Quality</h2>
