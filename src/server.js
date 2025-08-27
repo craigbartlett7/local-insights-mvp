@@ -23,42 +23,42 @@ const __dirname = path.dirname(__filename);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-async function buildPanels(geo, postcode) {
+async function buildPanels(geo, postcode, number) {
   const [crime, flood, broadband, mobile, epc, schools] = await Promise.all([
     getRecentCrimeSummary(geo.latitude, geo.longitude).catch(()=>null),
     getFloodSnapshot(geo.latitude, geo.longitude).catch(()=>null),
     getBroadbandSnapshot(postcode).catch(()=>null),
     getMobileSnapshot(postcode).catch(()=>null),
-    getEpcSummary(postcode).catch(()=>null),
+    getEpcSummary({ postcode, number }).catch(()=>null),
     getSchoolsSummary(geo).catch(()=>null)
   ]);
   return { crime, flood, broadband, mobile, epc, schools };
 }
 
-// Example: /api/preview?postcode=SW1A1AA
+// Example: /api/preview?postcode=SW1A1AA&number=10
 app.get('/api/preview', async (req, res) => {
   try {
-    const { postcode } = req.query;
+    const { postcode, number } = req.query;
     if (!postcode) return res.status(400).json({ error: 'postcode required' });
     const geo = await getGeoForPostcode(String(postcode));
-    const panels = await buildPanels(geo, String(postcode));
-    res.json({ input: { postcode }, geo, panels });
+    const panels = await buildPanels(geo, String(postcode), number ? String(number) : undefined);
+    res.json({ input: { postcode, number: number || null }, geo, panels });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'preview_failed', details: String(e) });
   }
 });
 
-// Example: /api/report.pdf?postcode=SW1A1AA
+// Example: /api/report.pdf?postcode=SW1A1AA&number=10
 app.get('/api/report.pdf', async (req, res) => {
   try {
-    const { postcode } = req.query;
+    const { postcode, number } = req.query;
     if (!postcode) return res.status(400).json({ error: 'postcode required' });
     const geo = await getGeoForPostcode(String(postcode));
-    const panels = await buildPanels(geo, String(postcode));
-    const pdfBuffer = await generatePdfReport({ postcode, geo, panels });
+    const panels = await buildPanels(geo, String(postcode), number ? String(number) : undefined);
+    const pdfBuffer = await generatePdfReport({ postcode, number: number || null, geo, panels });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="local-insights-${postcode}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="local-insights-${postcode}${number?('-'+number):''}.pdf"`);
     res.send(pdfBuffer);
   } catch (e) {
     console.error(e);

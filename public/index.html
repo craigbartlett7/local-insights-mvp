@@ -8,18 +8,30 @@
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 40px; color:#1b1f23; }
     h1 { color:#0B1F4D; }
     label, input { font-size: 16px; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; }
     .card { border:1px solid #e5e7eb; border-radius:12px; padding:16px; margin-top:16px; }
     button { background:#0B1F4D; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; }
     button:disabled { opacity:.5; }
     .small { color:#666; font-size: 12px; }
     pre { white-space: pre-wrap; word-wrap: break-word; }
+    input { padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; }
   </style>
 </head>
 <body>
-  <h1>Local Insights MVP – Sprint 1</h1>
-  <p>Enter a UK postcode to preview data and download a PDF.</p>
-  <label for="pc">Postcode</label>
-  <input id="pc" placeholder="e.g. SW1A 1AA" />
+  <h1>Local Insights MVP – Sprint 1.5</h1>
+  <p>Enter a UK <b>postcode</b> and optionally a <b>house number/name</b> to improve EPC accuracy.</p>
+
+  <div class="row">
+    <div>
+      <label for="number">House number/name (optional)</label><br/>
+      <input id="number" placeholder="e.g. 10 or The Oaks" />
+    </div>
+    <div>
+      <label for="pc">Postcode</label><br/>
+      <input id="pc" placeholder="e.g. SW1A 1AA" />
+    </div>
+  </div>
+  <div style="height:12px"></div>
   <button id="preview">Preview</button>
   <button id="pdf">Download PDF</button>
 
@@ -28,19 +40,28 @@
 <script>
 const $ = (s)=>document.querySelector(s);
 
+function qs(params) {
+  const q = new URLSearchParams();
+  const pc = $('#pc').value;
+  if (pc) q.set('postcode', pc);
+  const num = $('#number').value;
+  if (num) q.set('number', num);
+  return q.toString();
+}
+
 $('#preview').onclick = async () => {
-  const postcode = $('#pc').value;
-  if (!postcode) return alert('Enter a postcode');
+  const q = qs();
+  if (!q.includes('postcode=')) return alert('Enter a postcode');
   $('#output').innerHTML = 'Loading...';
-  const res = await fetch('/api/preview?postcode=' + encodeURIComponent(postcode));
+  const res = await fetch('/api/preview?' + q);
   const json = await res.json();
   $('#output').innerHTML = '<pre>'+JSON.stringify(json, null, 2)+'</pre>';
 };
 
 $('#pdf').onclick = () => {
-  const postcode = $('#pc').value;
-  if (!postcode) return alert('Enter a postcode');
-  window.location = '/api/report.pdf?postcode=' + encodeURIComponent(postcode);
+  const q = qs();
+  if (!q.includes('postcode=')) return alert('Enter a postcode');
+  window.location = '/api/report.pdf?' + q;
 };
 </script>
 </body>

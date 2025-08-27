@@ -9,24 +9,61 @@ const style = `
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background:#0B1F4D; color:#fff; text-align:left;}
     .small { color:#666; font-size:12px; }
+    .muted { color:#6b7280; }
+    .tag { display:inline-block; padding:2px 8px; border-radius: 9999px; background:#0B1F4D; color:#fff; font-size:12px; }
   </style>
 `;
 
 function row(k,v){ return `<tr><td>${k}</td><td>${v ?? '—'}</td></tr>`; }
 
-function htmlTemplate({ postcode, geo, panels }) {
+function epcSection(epc){
+  if (!epc) return '<p class="muted">EPC: No data</p>';
+  if (epc.mode === 'property') {
+    return `
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        ${row('Mode', 'Specific property')}
+        ${row('Latest rating', epc.rating || 'N/A')}
+        ${row('Last assessment', epc.assessmentDate || 'N/A')}
+        ${row('Note', epc.note || '—')}
+      </table>
+    `;
+  } else if (epc.mode === 'postcode') {
+    const dist = epc.distribution || {};
+    const distRows = ['A','B','C','D','E','F','G'].map(k=>`<tr><td>${k}</td><td>${dist[k] ?? 0}</td></tr>`).join('');
+    return `
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        ${row('Mode', 'Postcode context')}
+        ${row('Average rating', epc.averageRating || 'N/A')}
+        ${row('Properties analysed', epc.propertiesAnalysed || 'N/A')}
+        ${row('Latest certificate year', epc.latestYear || 'N/A')}
+        ${row('Note', epc.note || '—')}
+      </table>
+      <div style="height:8px"></div>
+      <table>
+        <tr><th>EPC Band</th><th>Count</th></tr>
+        ${distRows}
+      </table>
+    `;
+  }
+  return `<p class="muted">EPC: Unknown mode</p>`;
+}
+
+function htmlTemplate({ postcode, number, geo, panels }) {
   const crimeRows = (panels.crime?.topCategories || []).map(c=>`<tr><td>${c.category}</td><td>${c.count}</td></tr>`).join('');
   const schoolsRows = (panels.schools?.nearest || []).map(s=>`<tr><td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td></tr>`).join('');
   const mobileRows = (panels.mobile?.mnos || []).map(m=>`<tr><td>${m.name}</td><td>${m.indoor4G||'—'}</td><td>${m.outdoor5G||'—'}</td></tr>`).join('');
   const broadband = panels.broadband || {};
   const flood = panels.flood || {};
+  const epc = panels.epc || {};
 
   return `
     <!doctype html>
     <html><head><meta charset="utf-8">${style}</head>
     <body>
       <h1>Local Insights Report</h1>
-      <div class="small">Postcode: ${postcode}</div>
+      <div class="small">Postcode: ${postcode} ${number?(' | Number/Name: '+number):''}</div>
 
       <h2>Executive Snapshot</h2>
       <table>
@@ -35,8 +72,7 @@ function htmlTemplate({ postcode, geo, panels }) {
         ${row('Flood status (live alerts)', flood.activeWarnings!=null ? `${flood.activeWarnings} active in England` : 'N/A')}
         ${row('Broadband (max down/up)', (broadband.maxDownMbps? broadband.maxDownMbps+' / '+(broadband.maxUpMbps||'—')+' Mbps' : 'N/A'))}
         ${row('Mobile coverage (summary)', mobileRows ? 'See table below' : 'N/A')}
-        ${row('Nearest schools (top 3)', (panels.schools?.nearest?.length || 0) + ' listed below')}
-        ${row('EPC (latest known)', panels.epc?.rating ? `Rating ${panels.epc.rating}` : 'N/A')}
+        ${row('EPC mode', epc.mode || 'N/A')}
         ${row('LSOA', geo.lsoa || '—')}
       </table>
 
@@ -65,20 +101,16 @@ function htmlTemplate({ postcode, geo, panels }) {
         ${mobileRows || '<tr><td colspan="3">N/A</td></tr>'}
       </table>
 
+      <h2>EPC</h2>
+      ${epcSection(epc)}
+
       <h2>Schools (nearest)</h2>
       <table>
         <tr><th>Name</th><th>Ofsted</th><th>Distance</th></tr>
         ${schoolsRows || '<tr><td colspan="3">N/A</td></tr>'}
       </table>
 
-      <h2>EPC Summary</h2>
-      <table>
-        <tr><th>Metric</th><th>Value</th></tr>
-        ${row('Latest rating', panels.epc?.rating || 'N/A')}
-        ${row('Last assessment', panels.epc?.lastAssessment || 'N/A')}
-      </table>
-
-      <p class="small">Sources (to be piped live): postcodes.io, data.police.uk, environment.data.gov.uk, Ofcom APIs, epc.opendatacommunities.org, GIAS/Ofsted. This is Sprint 1 scaffold; some data are placeholders until keys are added.</p>
+      <p class="small">Sources (wired/coming): postcodes.io, data.police.uk, environment.data.gov.uk, Ofcom APIs, epc.opendatacommunities.org, GIAS/Ofsted. Hybrid EPC mode: if house number/name is provided we show property-level EPC; otherwise postcode-wide context.</p>
     </body></html>
   `;
 }
