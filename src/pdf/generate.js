@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { getBranding } from '../services/branding.js';
 
 const style = `
   <style>
@@ -12,6 +13,22 @@ const style = `
     .map { margin-top: 8px; border:1px solid #ddd; border-radius: 8px; overflow: hidden; }
   </style>
 `;
+
+function headerHtml(b){
+  const logo = b.logoDataUri ? `<img src="${b.logoDataUri}" style="height:28px;border-radius:6px;margin-right:8px">` : '';
+  return `
+    <div style="display:flex;align-items:center;gap:10px; border-bottom:2px solid ${b.primary}; padding-bottom:8px; margin-bottom:8px;">
+      ${logo}
+      <div>
+        <div style="font-size:18px;font-weight:700;color:${b.primary}">${b.name}</div>
+        <div style="font-size:12px;color:#666">${b.website}${b.phone? ' • '+b.phone : ''}${b.email? ' • '+b.email : ''}</div>
+      </div>
+    </div>
+  `;
+}
+function footerHtml(b){
+  return `<div style="border-top:1px solid #ddd; margin-top:12px; padding-top:8px; font-size:11px; color:#666;">Prepared by ${b.name}. ${b.website}</div>`;
+}
 
 function row(k,v){ return `<tr><td>${k}</td><td>${v ?? '—'}</td></tr>`; }
 
@@ -69,6 +86,7 @@ function htmlMap(panels){
 }
 
 function htmlTemplate({ postcode, number, geo, panels }) {
+  const BRAND = getBranding();
   const crimeRows = (panels.crime?.topCategories || []).map(c=>`<tr><td>${c.category}</td><td>${c.count}</td></tr>`).join('');
   const schoolsRows = (panels.schools?.nearest || []).map(s=>`<tr><td>${s.name}</td><td>${s.ofsted}</td><td>${s.distanceKm} km</td></tr>`).join('');
   const mobileRows = (panels.mobile?.mnos || []).map(m=>`<tr><td>${m.name}</td><td>${m.indoor4G||'—'}</td><td>${m.outdoor5G||'—'}</td></tr>`).join('');
@@ -80,7 +98,7 @@ function htmlTemplate({ postcode, number, geo, panels }) {
   return `
     <!doctype html>
     <html><head><meta charset="utf-8">${style}</head>
-    <body>
+    <body>${headerHtml(BRAND)}
       <h1>Local Insights Report</h1>
       <div class="small">Postcode: ${postcode} ${number?(' | Number/Name: '+number):''}</div>
 
@@ -136,7 +154,7 @@ function htmlTemplate({ postcode, number, geo, panels }) {
       </table>
 
       <p class="small">Sources: postcodes.io, data.police.uk, Environment Agency, Ofcom (pending), EPC ODC, ORS, Mapbox.</p>
-    </body></html>
+    ${footerHtml(BRAND)}</body></html>
   `;
 }
 

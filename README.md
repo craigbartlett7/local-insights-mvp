@@ -23,3 +23,11 @@ npm run dev
 - /api/preview?postcode=SW1A1AA&number=10
 - /api/report.html?postcode=SW1A1AA&number=10
 - /api/report.pdf?postcode=SW1A1AA&number=10
+
+
+## Branding
+- Replace `public/brand-logo.png` with your agency's logo (PNG).
+- Set env vars in Render:
+  - `BRAND_NAME`, `BRAND_WEBSITE`, `BRAND_EMAIL`, `BRAND_PHONE`
+  - Optional colours: `BRAND_PRIMARY`, `BRAND_SECONDARY`
+- Branding appears on the homepage header, HTML report, and PDF (header & footer).
