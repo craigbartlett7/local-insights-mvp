@@ -148,6 +148,7 @@ function htmlTemplate({ postcode, number, geo, panels }) {
         ${row('Mobile coverage (summary)', mobileRows ? 'See table below' : 'N/A')}
         ${row('EPC mode', epc.mode || 'N/A')}
         ${row('LSOA', geo.lsoa || '—')}
+        ${row('Avg household income (5km)', panels.income?.available ? '£'+(panels.income.averageIncome.toLocaleString()) : (panels.income?.note || 'N/A'))}
       </table>
 
       <h2>Accessibility (Isochrones)</h2>
@@ -171,6 +172,12 @@ function htmlTemplate({ postcode, number, geo, panels }) {
       </table>
       <div>${(panels.riverYear?.series && panels.riverYear.series.length) ? svgSparkline(panels.riverYear.series) : ''}</div>
       <div class="small">Year stats: min ${panels.riverYear?.stats?.min ?? '—'} • median ${panels.riverYear?.stats?.median ?? '—'} • max ${panels.riverYear?.stats?.max ?? '—'} ${panels.riverYear?.unit || ''}</div>
+
+      <h2>Income (5 km catchment)</h2>
+      <table>
+        <tr><th>Average annual household income</th><td>${panels.income?.available ? ('£'+panels.income.averageIncome.toLocaleString()) : (panels.income?.note || 'N/A')}</td></tr>
+        <tr><th>Points used</th><td>${panels.income?.pointsUsed ?? '—'}</td></tr>
+      </table>
 
       <h2>Air Quality</h2>
       <table>
